@@ -6,7 +6,7 @@ from torchvision import datasets, transforms, models
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('data_dir')
-    parser.add_argument('--save_dir')
+    parser.add_argument('--save_dir', default='./')
     parser.add_argument('--arch', default='vgg16')
     parser.add_argument('--learning_rate', type=float, default=0.01)
     parser.add_argument('--hidden_units', type=int, default=512)

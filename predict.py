@@ -42,8 +42,8 @@ def predict(image_path, model, topk, device):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('input')
-    parser.add_argument('checkpoint')
+    parser.add_argument('input', default='flowers/test/1/image_06743.jpg')
+    parser.add_argument('checkpoint', default='checkpoint.pth')
     parser.add_argument('--top_k', type=int, default=1)
     parser.add_argument('--category_names', type=str)
     parser.add_argument('--gpu', action='store_true')
@@ -56,7 +56,8 @@ def main():
     model.class_to_idx = class_to_idx
 
     probs, classes = predict(args.input, model, args.top_k, device)
-
+    print('Predicted class:', classes)
+    print('Probabilities:', probs)
     if args.category_names:
         with open(args.category_names, 'r') as f:
             cat_to_name = json.load(f)
