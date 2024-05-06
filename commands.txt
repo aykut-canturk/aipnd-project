@@ -1,0 +1,7 @@
+python train.py "test_images" --learning_rate 0.1 --hidden_units 512 --epochs 1 --gpu --arch resnet18
+python train.py "test_images" --learning_rate 0.1 --hidden_units 512 --epochs 1 --gpu --arch vgg13
+python train.py "test_images" --learning_rate 0.1 --hidden_units 512 --epochs 1 --gpu --arch vgg16
+
+python predict.py test_images\train\1\image_06734.jpg checkpoints\resnet18.pth --category_names cat_to_name.json --top_k 3 --gpu
+python predict.py test_images\train\1\image_06734.jpg checkpoints\vgg13.pth --category_names cat_to_name.json --top_k 3 --gpu
+python predict.py test_images\train\1\image_06734.jpg checkpoints\vgg16.pth --category_names cat_to_name.json --top_k 3 --gpu
