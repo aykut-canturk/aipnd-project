@@ -4,19 +4,32 @@ import zipfile
 import numpy as np
 import torch
 from torch import nn
+from torchvision.models import VGG16_Weights, VGG13_Weights, ResNet18_Weights
 from torchvision import models
 from PIL import Image
 
 
+def __get_model(arch):
+    if arch == "resnet18":
+        model = models.resnet18(weights=ResNet18_Weights.DEFAULT)
+    elif arch == "vgg16":
+        model = models.vgg16(weights=VGG16_Weights.DEFAULT)
+    elif arch == "vgg13":
+        model = models.vgg13(weights=VGG13_Weights.DEFAULT)
+    else:
+        print(arch)
+        raise ValueError("Unsupported model name")
+    return model
+
+
 def build_model(device, arch="vgg16", hidden_units=512):
+    model = __get_model(arch)
+
     if arch == "vgg16":
-        model = models.vgg16(pretrained=True)
         input_size = model.classifier[0].in_features
     elif arch == "vgg13":
-        model = models.vgg13(pretrained=True)
         input_size = model.classifier[0].in_features
     elif arch == "resnet18":
-        model = models.resnet18(pretrained=True)
         input_size = model.fc.in_features
     else:
         print(arch)
@@ -159,16 +172,7 @@ def load_checkpoint(filepath):
     checkpoint = torch.load(filepath)
     arch = checkpoint["arch"]
 
-    if arch == "resnet18":
-        model = models.resnet18(pretrained=True)
-    elif arch == "vgg16":
-        model = models.vgg16(pretrained=True)
-    elif arch == "vgg13":
-        model = models.vgg13(pretrained=True)
-    else:
-        print(arch)
-        raise ValueError("Unsupported model name")
-
+    model = __get_model(arch)
     model.class_to_idx = checkpoint["class_to_idx"]
 
     if arch == "resnet18":
