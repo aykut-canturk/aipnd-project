@@ -1,4 +1,5 @@
 import argparse
+import os
 import json
 from model_utils import load_checkpoint, predict
 
@@ -29,13 +30,21 @@ def main():
 
     probs, classes = predict(args.input_image, model, args.top_k, args.gpu)
 
+    real_class = __get_real_class(args.input_image)
     if args.category_names:
         with open(args.category_names, "r", encoding="utf-8") as f:
             cat_to_name = json.load(f)
-        classes = [cat_to_name[class_] for class_ in classes]
 
+        classes = [cat_to_name[class_] for class_ in classes]
+        real_class = cat_to_name[real_class]
+
+    print(f"Real label: {real_class}")
     for prob, class_ in zip(probs, classes):
         print(f"{class_}: {prob*100:.2f}%")
+
+
+def __get_real_class(file_path):
+    return os.path.basename(os.path.dirname(file_path))
 
 
 if __name__ == "__main__":
