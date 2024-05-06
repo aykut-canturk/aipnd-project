@@ -1,9 +1,11 @@
-# model_utils.py
+import os
 import torch
 from torch import nn
 from torchvision import models
 from PIL import Image
 import numpy as np
+from datetime import datetime
+import zipfile
 
 
 def build_model(device, arch="vgg16", hidden_units=512):
@@ -45,10 +47,20 @@ def build_model(device, arch="vgg16", hidden_units=512):
 
 def train_model(model, device, train_loader, learning_rate=0.001, epochs=1):
     criterion = nn.NLLLoss()
-    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    optimizer = torch.optim.SGD(
-        model.classifier.parameters(), lr=learning_rate, momentum=0.9
-    )
+    # optimizer = torch.optim.SGD(
+    #     model.classifier.parameters(), lr=learning_rate, momentum=0.9
+    # )
+
+    if isinstance(model, models.ResNet):
+        optimizer = torch.optim.SGD(
+            model.fc.parameters(), lr=learning_rate, momentum=0.9
+        )
+    elif isinstance(model, models.VGG):
+        optimizer = torch.optim.SGD(
+            model.classifier.parameters(), lr=learning_rate, momentum=0.9
+        )
+    else:
+        raise ValueError("Unsupported architecture")
 
     # Train the model
     train_count = len(train_loader)
@@ -69,57 +81,6 @@ def train_model(model, device, train_loader, learning_rate=0.001, epochs=1):
             print("Training loss: {:.4f}".format(loss.item()))
 
     print("Training complete")
-
-    # criterion = nn.NLLLoss()
-    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-    # device = "cuda" if torch.cuda.is_available() and device == "cuda" else "cpu"
-    # model.to(device)
-
-    # for epoch in range(epochs):
-    #     train_loss = 0.0
-    #     valid_loss = 0.0
-    #     accuracy = 0.0
-
-    #     # Training the model
-    #     model.train()
-    #     for images, labels in train_loader:
-    #         images, labels = images.to(device), labels.to(device)
-
-    #         optimizer.zero_grad()
-    #         output = model(images)
-    #         loss = criterion(output, labels)
-    #         loss.backward()
-    #         optimizer.step()
-
-    #         train_loss += loss.item() * images.size(0)
-
-    #     # Validating the model
-    #     model.eval()
-    #     with torch.no_grad():
-    #         for images, labels in valid_loader:
-    #             images, labels = images.to(device), labels.to(device)
-
-    #             output = model(images)
-    #             loss = criterion(output, labels)
-
-    #             valid_loss += loss.item() * images.size(0)
-
-    #             ps = torch.exp(output)
-    #             top_p, top_class = ps.topk(1, dim=1)
-    #             equals = top_class == labels.view(*top_class.shape)
-    #             accuracy += torch.mean(equals.type(torch.FloatTensor)).item()
-
-    #     train_loss = train_loss / len(train_loader.dataset)
-    #     valid_loss = valid_loss / len(valid_loader.dataset)
-    #     accuracy = accuracy / len(valid_loader)
-
-    #     print(
-    #         f"Epoch {epoch+1}/{epochs}.. "
-    #         f"Train loss: {train_loss:.3f}.. "
-    #         f"Validation loss: {valid_loss:.3f}.. "
-    #         f"Validation accuracy: {accuracy:.3f}"
-    #     )
 
 
 def validate_model(model, device, valid_loader):
@@ -157,70 +118,68 @@ def validate_model(model, device, valid_loader):
     )
 
 
-def save_checkpoint(model, class_to_idx, save_dir="checkpoints/"):
+def save_checkpoint(model, class_to_idx, arch, save_dir="checkpoints/"):
     print(f"Saving checkpoint to {save_dir}")
-    # checkpoint = {
-    #     "arch": arch,
-    #     "hidden_units": hidden_units,
-    #     "state_dict": model.state_dict(),
-    # }
-
-    # torch.save(checkpoint, save_dir + f"{arch}_checkpoint.pth")
-
-    # Save the mapping of classes to indices
-    model.class_to_idx = class_to_idx
-    # model.class_to_idx = image_datasets['train'].class_to_idx
 
     # Create a checkpoint dictionary
     checkpoint = {
-        "class_to_idx": model.class_to_idx,
+        "arch": arch,
+        "class_to_idx": class_to_idx,
         "state_dict": model.state_dict(),
-        "classifier": model.classifier,
-        # 'optimizer_state': optimizer.state_dict(),
-        # 'num_epochs': num_epochs
     }
 
+    if arch == "resnet18":
+        checkpoint["fc"] = model.fc
+    elif arch in ["vgg16", "vgg13"]:
+        checkpoint["classifier"] = model.classifier
+    else:
+        raise ValueError("Unsupported architecture")
+
     # Save the checkpoint
-    torch.save(checkpoint, save_dir + "checkpoint.pth")
+    file_path = os.path.join(save_dir, "checkpoint.pth")
+    __backup_checkpoint(file_path)
+    torch.save(checkpoint, file_path)
+    print(f"Checkpoint saved to {file_path}")
 
 
-# def load_checkpoint(filepath):
-#     checkpoint = torch.load(filepath)
-#     arch = checkpoint['arch']
-#     hidden_units = checkpoint['hidden_units']
-#     model = build_model(arch, hidden_units)
-#     model.load_state_dict(checkpoint['state_dict'])
+def __backup_checkpoint(checkpoint_path):
+    if not os.path.exists(checkpoint_path):
+        print(f"Checkpoint file {checkpoint_path} does not exist")
+        return
 
-#     return model
+    zip_file_name = f"{checkpoint_path}.{datetime.now().strftime('%Y%m%d%H%M%S')}.zip"
+    print(f"Backing up existing checkpoint to {zip_file_name}")
+    with zipfile.ZipFile(zip_file_name, "w", zipfile.ZIP_DEFLATED) as zipf:
+        zipf.write(checkpoint_path, arcname=os.path.basename(checkpoint_path))
+    print("Backup complete")
+    # remove the existing checkpoint
+    os.remove(checkpoint_path)
 
 
 def load_checkpoint(filepath):
-    # Load the saved file
     checkpoint = torch.load(filepath)
+    arch = checkpoint["arch"]
 
-    # Download pretrained model
-    model = models.vgg16(pretrained=True)
+    if arch == "resnet18":
+        model = models.resnet18(pretrained=True)
+    elif arch == "vgg16":
+        model = models.vgg16(pretrained=True)
+    elif arch == "vgg13":
+        model = models.vgg13(pretrained=True)
+    else:
+        print(arch)
+        raise ValueError("Unsupported model name")
 
-    # Freeze parameters so we don't backprop through them
-    for param in model.parameters():
-        param.requires_grad = False
-
-    # Load stuff from checkpoint
     model.class_to_idx = checkpoint["class_to_idx"]
-    model.classifier = checkpoint["classifier"]
+
+    if arch == "resnet18":
+        model.fc = checkpoint["fc"]
+    elif arch in ["vgg16", "vgg13"]:
+        model.classifier = checkpoint["classifier"]
+
     model.load_state_dict(checkpoint["state_dict"])
 
     return model
-
-
-# def predict(image, model, topk=1):
-#     model.eval()
-#     with torch.no_grad():
-#         output = model(image)
-#         ps = torch.exp(output)
-#         top_p, top_class = ps.topk(topk, dim=1)
-
-#     return top_p[0].tolist(), top_class[0].tolist()
 
 
 def process_image(image):

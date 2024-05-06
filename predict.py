@@ -1,5 +1,3 @@
-# predict.py
-
 import argparse
 import json
 from model_utils import load_checkpoint, predict

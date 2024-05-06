@@ -1,5 +1,3 @@
-# data_utils.py
-
 import os
 import torch
 from torchvision import datasets, transforms
@@ -51,8 +49,12 @@ def load_data(data_dir):
         "valid": torch.utils.data.DataLoader(image_datasets["valid"], batch_size=32),
         "test": torch.utils.data.DataLoader(image_datasets["test"], batch_size=32),
     }
-    
-    return dataloaders["train"], dataloaders["valid"], dataloaders["test"], image_datasets['train'].class_to_idx
+    return (
+        dataloaders["train"],
+        dataloaders["valid"],
+        dataloaders["test"],
+        image_datasets["train"].class_to_idx,
+    )
 
 
 def process_image(image_path):
