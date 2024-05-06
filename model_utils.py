@@ -136,7 +136,7 @@ def save_checkpoint(model, class_to_idx, arch, save_dir="checkpoints/"):
         raise ValueError("Unsupported architecture")
 
     # Save the checkpoint
-    file_path = os.path.join(save_dir, "checkpoint.pth")
+    file_path = os.path.join(save_dir, f"{arch}.pth")
     __backup_checkpoint(file_path)
     torch.save(checkpoint, file_path)
     print(f"Checkpoint saved to {file_path}")
