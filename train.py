@@ -1,6 +1,7 @@
 # train.py
 
 import argparse
+from datetime import datetime
 import torch
 from model_utils import build_model, train_model, validate_model, save_checkpoint
 from data_utils import load_data
@@ -46,6 +47,9 @@ def main():
     args = parser.parse_args()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
+    print(f"Device: {device}")
+
+    start_time = datetime.now()
 
     train_loader, valid_loader, _, class_to_idx = load_data(args.data_dir)
     model = build_model(device, args.arch, args.hidden_units)
@@ -53,6 +57,8 @@ def main():
     train_model(model, device, train_loader, args.learning_rate, args.epochs)
     validate_model(model, device, valid_loader)
     save_checkpoint(model, class_to_idx, args.arch, args.save_dir)
+
+    print(f"Total training time: {datetime.now() - start_time}")
 
 
 if __name__ == "__main__":

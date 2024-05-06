@@ -30,7 +30,7 @@ def main():
     probs, classes = predict(args.input_image, model, args.top_k, args.gpu)
 
     if args.category_names:
-        with open(args.category_names, "r") as f:
+        with open(args.category_names, "r", encoding="utf-8") as f:
             cat_to_name = json.load(f)
         classes = [cat_to_name[class_] for class_ in classes]
 

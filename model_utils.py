@@ -1,11 +1,11 @@
 import os
+from datetime import datetime
+import zipfile
+import numpy as np
 import torch
 from torch import nn
 from torchvision import models
 from PIL import Image
-import numpy as np
-from datetime import datetime
-import zipfile
 
 
 def build_model(device, arch="vgg16", hidden_units=512):
@@ -47,9 +47,6 @@ def build_model(device, arch="vgg16", hidden_units=512):
 
 def train_model(model, device, train_loader, learning_rate=0.001, epochs=1):
     criterion = nn.NLLLoss()
-    # optimizer = torch.optim.SGD(
-    #     model.classifier.parameters(), lr=learning_rate, momentum=0.9
-    # )
 
     if isinstance(model, models.ResNet):
         optimizer = torch.optim.SGD(
@@ -64,13 +61,12 @@ def train_model(model, device, train_loader, learning_rate=0.001, epochs=1):
 
     # Train the model
     train_count = len(train_loader)
-    i = 0
     for epoch_idx in range(epochs):
-        print("Epoch {}/{}".format(epoch_idx, epochs))
-        i = 0
+        print(f"Epoch {epoch_idx+1}/{epochs}")
+        train_idx = 1
         for inputs, labels in train_loader:
-            print("Batch {}/{}".format(i, train_count))
-            i += 1
+            print(f"train {train_idx}/{train_count} (epoch {epoch_idx+1}/{epochs})")
+            train_idx += 1
             inputs = inputs.to(device)
             labels = labels.to(device)
             optimizer.zero_grad()
@@ -78,7 +74,7 @@ def train_model(model, device, train_loader, learning_rate=0.001, epochs=1):
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-            print("Training loss: {:.4f}".format(loss.item()))
+            print(f"Training loss: {loss.item():.4f}")
 
     print("Training complete")
 
@@ -96,7 +92,7 @@ def validate_model(model, device, valid_loader):
     with torch.no_grad():
         i = 1
         for inputs, labels in valid_loader:
-            print("Batch {}/{}".format(i, len(valid_loader)))
+            print(f"validate {i}/{len(valid_loader)}")
             i += 1
             inputs = inputs.to(device)
             labels = labels.to(device)
@@ -108,7 +104,7 @@ def validate_model(model, device, valid_loader):
 
             # Calculate accuracy
             ps = torch.exp(logps)
-            top_p, top_class = ps.topk(1, dim=1)
+            _, top_class = ps.topk(1, dim=1)
             equals = top_class == labels.view(*top_class.shape)
             accuracy += torch.mean(equals.type(torch.FloatTensor)).item()
 
@@ -136,6 +132,9 @@ def save_checkpoint(model, class_to_idx, arch, save_dir="checkpoints/"):
         raise ValueError("Unsupported architecture")
 
     # Save the checkpoint
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
     file_path = os.path.join(save_dir, f"{arch}.pth")
     __backup_checkpoint(file_path)
     torch.save(checkpoint, file_path)
