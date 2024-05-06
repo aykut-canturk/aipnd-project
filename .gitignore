@@ -104,3 +104,6 @@ ENV/
 
 *.jpg
 *.jpeg
+*.pth
+*.zip
+*.rar
